@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>V-PARK 方案比較</title>
+<style>
+:root{--bg:#F3F3F1;--panel:#fff;--ink:#161616;--ink2:#5c5f63;--rule:#dcdcd8;--brand:#2F3E9E;--err:#C0392B}
+@media (prefers-color-scheme:dark){:root{--bg:#161616;--panel:#222;--ink:#EDEDED;--ink2:#a5a7ab;--rule:#3a3a3a;--brand:#6F7FE0}}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--bg);color:var(--ink);font:16px/1.6 -apple-system,BlinkMacSystemFont,"Noto Sans TC","PingFang TC",sans-serif;padding:16px}
+.card{width:100%;max-width:400px;background:var(--panel);border:1px solid var(--rule);border-radius:14px;padding:28px 24px}
+h1{font-size:20px;margin:0 0 4px}
+.sub{color:var(--ink2);font-size:14px;margin:0 0 20px}
+label{display:block;font-size:14px;color:var(--ink2);margin:0 0 6px}
+input{width:100%;font:inherit;padding:10px 12px;border:1px solid var(--rule);border-radius:8px;background:var(--bg);color:var(--ink)}
+input:focus{outline:2px solid var(--brand);outline-offset:-1px}
+button{width:100%;margin-top:14px;font:inherit;font-weight:700;padding:10px;border:0;border-radius:8px;background:var(--brand);color:#fff;cursor:pointer}
+button:disabled{opacity:.5;cursor:default}
+.link{background:none;color:var(--brand);font-weight:400;font-size:14px;margin-top:10px;padding:4px}
+.msg{min-height:22px;font-size:14px;margin-top:12px;color:var(--ink2)}
+.msg.err{color:var(--err)}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>V-PARK 方案比較</h1>
+  <p class="sub">請輸入受邀信箱以取得驗證碼<br>Enter your invited email to receive a code</p>
+  <form id="f1">
+    <label for="em">信箱 Email</label>
+    <input id="em" type="email" autocomplete="email" required placeholder="name@company.com">
+    <button id="b1" type="submit">寄送驗證碼 Send code</button>
+  </form>
+  <form id="f2" hidden>
+    <label for="cd">驗證碼 Code（6 位數）</label>
+    <input id="cd" inputmode="numeric" autocomplete="one-time-code" maxlength="6" required placeholder="123456">
+    <button id="b2" type="submit">進入 Enter</button>
+    <button class="link" id="back" type="button">更換信箱或重新寄送 Change email / resend</button>
+  </form>
+  <div class="msg" id="msg"></div>
+</div>
+<script>
+(function(){
+var API='https://script.google.com/macros/s/AKfycbwzk7FpKn4LkNfnUeLKKsyBJWqwc5G295C4htzIhs5NFSuwHPFAy887xZUpacosIolc/exec', KEY='vp-ext-token', $=function(i){return document.getElementById(i)};
+function call(op,args){return fetch(API,{method:'POST',credentials:'omit',redirect:'follow',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(Object.assign({op:op},args||{}))}).then(function(r){return r.json()})}
+function msg(t,err){var m=$('msg');m.textContent=t||'';m.className='msg'+(err?' err':'')}
+function getTok(){try{return localStorage.getItem(KEY)||''}catch(e){return ''}}
+function setTok(t){try{t?localStorage.setItem(KEY,t):localStorage.removeItem(KEY)}catch(e){}}
+function shim(tok){
+  return '<script>window.VP_EXT=true;(function(){var API='+JSON.stringify(API)+',TOK='+JSON.stringify(tok)+',KEY='+JSON.stringify(KEY)+';'+
+  'function call(op,a){return fetch(API,{method:"POST",credentials:"omit",redirect:"follow",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(Object.assign({op:op,token:TOK},a||{}))}).then(function(r){return r.json()}).then(function(o){if(o&&o.auth){try{localStorage.removeItem(KEY)}catch(e){}location.reload();throw new Error("auth")}if(!o||!o.ok)throw new Error((o&&o.error)||"cloud error");return o.r})}'+
+  'function R(){var s=function(){},f=function(e){console.error(e)};var o={withSuccessHandler:function(x){s=x;return o},withFailureHandler:function(x){f=x;return o},'+
+  'load:function(){call("load").then(s,f)},listVersions:function(w){call("versions",{withData:!!w}).then(s,f)},save:function(j,b,fo){call("save",{json:j,baseRev:b,force:!!fo}).then(s,f)}};return o}'+
+  'var q={edit:"Editable"};try{new URLSearchParams(location.search).forEach(function(v,k){q[k]=v})}catch(e){}'+
+  'window.google={script:{get run(){return R()},url:{getLocation:function(cb){setTimeout(function(){cb({parameter:q})},0)}},host:{}}};})();<\/script>';
+}
+function open(tok){
+  msg('載入中… Loading…');
+  call('page',{token:tok}).then(function(o){
+    if(!o.ok){setTok('');msg(o.auth?'':(o.error||'載入失敗'),!o.auth);return}
+    var h=o.r.html.replace('<head>','<head>'+shim(tok));
+    document.open();document.write(h);document.close();
+  }).catch(function(){msg('連線失敗，請重新整理 Connection failed, please reload',true)});
+}
+var t0=getTok(); if(t0) open(t0);
+$('f1').onsubmit=function(e){e.preventDefault();var em=$('em').value.trim();if(!em)return;$('b1').disabled=true;msg('寄送中… Sending…');
+  call('otp',{email:em}).then(function(o){$('b1').disabled=false;if(!o.ok){msg(o.error||'寄送失敗',true);return}
+    $('f1').hidden=true;$('f2').hidden=false;$('cd').focus();msg('若信箱在受邀名單內，驗證碼已寄出（10 分鐘內有效）。If invited, a code has been sent.')})
+  .catch(function(){$('b1').disabled=false;msg('連線失敗，請再試一次 Connection failed',true)})};
+$('f2').onsubmit=function(e){e.preventDefault();var em=$('em').value.trim(),cd=$('cd').value.trim();$('b2').disabled=true;msg('驗證中… Verifying…');
+  call('verify',{email:em,code:cd}).then(function(o){$('b2').disabled=false;if(!o.ok){msg(o.error||'驗證失敗',true);return}setTok(o.r.token);open(o.r.token)})
+  .catch(function(){$('b2').disabled=false;msg('連線失敗，請再試一次 Connection failed',true)})};
+$('back').onclick=function(){$('f2').hidden=true;$('f1').hidden=false;$('cd').value='';msg('')};
+})();
+</script>
+</body>
+</html>
